@@ -2,6 +2,8 @@
 
 Single-file chat console for [Ollama](https://ollama.com). No build step, no dependencies. Open the HTML and talk to your local models.
 
+<img width="2045" height="986" alt="image" src="https://github.com/user-attachments/assets/90528132-330e-43f7-8f9a-59b1c3a77bb6" />
+
 ## Quick Start
 
 1. [Install Ollama](https://ollama.com/download)
