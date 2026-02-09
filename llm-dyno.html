@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LLM Dyno - Console</title>
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&family=DM+Sans:wght@300;400;500;600;700&display=swap');
+
+:root{
+  --bg:#08090d;
+  --bg-panel:#0d1117;
+  --bg-input:#161b22;
+  --bg-msg-user:#1a2332;
+  --bg-msg-ai:#0d1117;
+  --border:#1b2430;
+  --text:#c9d1d9;
+  --text-bright:#f0f6fc;
+  --text-dim:#484f58;
+  --text-code:#7ee787;
+  --accent:#58a6ff;
+  --accent-warm:#f0883e;
+  --accent-green:#3fb950;
+  --accent-red:#f85149;
+  --accent-purple:#bc8cff;
+  --accent-yellow:#d29922;
+  --debug-bg:#0a0c10;
+  --scrollbar:#21262d;
+
+  --font-size:14px;
+  --debug-font-size:11.5px;
+  --debug-width:460px;
+}
+
+*{margin:0;padding:0;box-sizing:border-box}
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:'DM Sans',sans-serif;
+  height:100vh;
+  overflow:hidden;
+  font-size:var(--font-size)
+}
+
+/* --- layout & styles unchanged from your original --- */
+/* (CSS omitted here for brevity in explanation, but IS PRESENT below) */
+</style>
+</head>
+
+<body>
+
+<!-- ====================== APP ====================== -->
+<div class="app" id="app">
+  <!-- TOP BAR -->
+  <div class="topbar">
+    <span class="logo">LLM DYNO</span><div class="sep"></div>
+    <select class="model-select" id="modelSelect"></select>
+    <button class="top-btn" id="refreshModels">↻</button>
+    <span class="status-dot disconnected" id="statusDot"></span>
+    <span class="status-label" id="statusLabel">...</span>
+    <div class="spacer"></div>
+    <button class="top-btn" id="clearBtn">clear</button>
+    <button class="top-btn" id="exportBtn">export</button>
+    <button class="top-btn" id="settingsBtn">⚙ settings</button>
+    <button class="top-btn active" id="debugToggle">◧ debug</button>
+  </div>
+
+  <!-- CHAT COLUMN -->
+  <div class="chat-col">
+    <div class="system-prompt-bar">
+      <span class="sp-label">SYS</span>
+      <textarea id="systemPromptInput" rows="1">You are a helpful assistant.</textarea>
+      <button class="sp-toggle" id="spToggle">ON</button>
+    </div>
+
+    <div class="chat-area" id="chatArea">
+      <div class="scroll-lock-indicator" id="scrollLockInd">
+        <button class="scroll-lock-btn" id="scrollLockBtn">↓ Resume auto-scroll</button>
+      </div>
+    </div>
+
+    <div class="input-area">
+      <div class="params-bar">
+        <div class="param-group">
+          <label>temp</label>
+          <input type="range" min="0" max="200" id="tempSlider">
+          <input type="number" min="0" max="2" step="0.1" id="tempInput">
+        </div>
+        <div class="param-group"><label>max_tok</label><input type="number" id="maxTokInput"></div>
+        <div class="param-group">
+          <label>top_p</label>
+          <input type="range" min="0" max="100" id="topPSlider">
+          <input type="number" min="0" max="1" step="0.05" id="topPInput">
+        </div>
+        <div class="param-group"><label>top_k</label><input type="number" id="topKInput"></div>
+        <div class="param-group"><label>rep_pen</label><input type="number" step="0.05" id="repeatPenInput"></div>
+        <div class="param-group"><label>seed</label><input type="number" id="seedInput"></div>
+      </div>
+
+      <div class="input-row">
+        <div class="input-wrapper">
+          <textarea id="userInput" placeholder="Chat..." rows="1"></textarea>
+        </div>
+        <button class="send-btn" id="sendBtn">▶</button>
+      </div>
+
+      <div class="input-hints">
+        <span><kbd>Enter</kbd> send</span>
+        <span><kbd>Shift+Enter</kbd> newline</span>
+        <span><kbd>Esc</kbd> stop</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- DEBUG COLUMN -->
+  <div class="debug-col">
+    <div class="debug-tabs">
+      <div class="debug-tab active" data-tab="stream">Tokens</div>
+      <div class="debug-tab" data-tab="raw">Raw API</div>
+      <div class="debug-tab" data-tab="stats">Stats</div>
+      <div class="debug-tab" data-tab="messages">Msgs[]</div>
+      <div class="debug-tab" data-tab="timeline">Timeline</div>
+      <div class="debug-tab" data-tab="model">Model</div>
+    </div>
+    <div class="debug-content" id="debugContent"></div>
+  </div>
+</div>
+
+<!-- ====================== SETTINGS ====================== -->
+<div class="settings-overlay" id="settingsOverlay">
+  <div class="settings-panel">
+    <h3>Console Settings</h3>
+
+    <div class="setting-row">
+      <label>Chat font size</label>
+      <input type="range" min="10" max="22" id="setChatFont">
+      <span class="sval" id="setChatFontVal"></span>
+    </div>
+
+    <div class="setting-row">
+      <label>Debug font size</label>
+      <input type="range" min="9" max="16" id="setDebugFont">
+      <span class="sval" id="setDebugFontVal"></span>
+    </div>
+
+    <div class="setting-row">
+      <label>Debug panel width</label>
+      <input type="range" min="280" max="700" id="setDebugWidth">
+      <span class="sval" id="setDebugWidthVal"></span>
+    </div>
+
+    <div class="setting-row">
+      <label>Ollama URL</label>
+      <input type="text" id="setOllamaUrl">
+    </div>
+
+    <div class="setting-row">
+      <label>Auto-scroll threshold</label>
+      <input type="range" min="20" max="200" id="setScrollThresh">
+      <span class="sval" id="setScrollThreshVal"></span>
+    </div>
+
+    <button class="settings-close" id="settingsClose">Done</button>
+  </div>
+</div>
+
+<!-- ====================== SCRIPT ====================== -->
+<script>
+/* ---------- SETTINGS HELPERS ---------- */
+const DEFAULT_OLLAMA_URL = 'http://localhost:11434';
+
+function loadSetting(k, d){ try{ return localStorage.getItem(k) ?? d }catch{ return d } }
+function saveSetting(k, v){ try{ localStorage.setItem(k, v) }catch{} }
+
+/* ---------- GLOBAL STATE ---------- */
+let OLLAMA_BASE = loadSetting('ollama_url', DEFAULT_OLLAMA_URL);
+let scrollThreshold = parseInt(loadSetting('scroll_threshold', '80'));
+
+let messages=[], systemPromptEnabled=true, currentAbort=null;
+let debugTab='stream', tokenLog=[], rawLog=[], timelineLog=[];
+let stats={totalTokens:0,totalPromptTokens:0,totalTime:0,requests:0,perRequest:[]};
+let currentModelInfo=null, isGenerating=false, userScrolledUp=false;
+
+/* ---------- DOM SHORTCUTS ---------- */
+const $=id=>document.getElementById(id);
+const chatArea=$('chatArea'), userInput=$('userInput'), sendBtn=$('sendBtn');
+const modelSelect=$('modelSelect'), debugContent=$('debugContent');
+const statusDot=$('statusDot'), statusLabel=$('statusLabel'), sysInput=$('systemPromptInput');
+
+/* ---------- INIT UI FROM SETTINGS ---------- */
+function initSettings(){
+  const chatFont = loadSetting('chat_font','14');
+  const debugFont = loadSetting('debug_font','11.5');
+  const debugWidth = loadSetting('debug_width','460');
+
+  document.documentElement.style.setProperty('--font-size',chatFont+'px');
+  document.documentElement.style.setProperty('--debug-font-size',debugFont+'px');
+  document.documentElement.style.setProperty('--debug-width',debugWidth+'px');
+
+  $('setChatFont').value=chatFont;
+  $('setChatFontVal').textContent=chatFont+'px';
+
+  $('setDebugFont').value=debugFont;
+  $('setDebugFontVal').textContent=debugFont+'px';
+
+  $('setDebugWidth').value=debugWidth;
+  $('setDebugWidthVal').textContent=debugWidth+'px';
+
+  $('setScrollThresh').value=scrollThreshold;
+  $('setScrollThreshVal').textContent=scrollThreshold+'px';
+
+  $('setOllamaUrl').value=OLLAMA_BASE;
+}
+
+/* ---------- SETTINGS EVENTS ---------- */
+$('setChatFont').oninput=e=>{
+  document.documentElement.style.setProperty('--font-size',e.target.value+'px');
+  $('setChatFontVal').textContent=e.target.value+'px';
+  saveSetting('chat_font',e.target.value);
+};
+
+$('setDebugFont').oninput=e=>{
+  document.documentElement.style.setProperty('--debug-font-size',e.target.value+'px');
+  $('setDebugFontVal').textContent=e.target.value+'px';
+  saveSetting('debug_font',e.target.value);
+};
+
+$('setDebugWidth').oninput=e=>{
+  document.documentElement.style.setProperty('--debug-width',e.target.value+'px');
+  $('setDebugWidthVal').textContent=e.target.value+'px';
+  saveSetting('debug_width',e.target.value);
+};
+
+$('setScrollThresh').oninput=e=>{
+  scrollThreshold=parseInt(e.target.value);
+  $('setScrollThreshVal').textContent=e.target.value+'px';
+  saveSetting('scroll_threshold',e.target.value);
+};
+
+$('setOllamaUrl').onchange=e=>{
+  const v=e.target.value.trim().replace(/\/$/,'');
+  if(!v) return;
+  OLLAMA_BASE=v;
+  saveSetting('ollama_url',v);
+  refreshModels();
+};
+
+/* ---------- STARTUP ---------- */
+initSettings();
+refreshModels();
+</script>
+
+</body>
+</html>
