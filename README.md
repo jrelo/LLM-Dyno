@@ -1,6 +1,6 @@
 # LLM-Dyno
 
-Single-file large language model chat console for [Ollama](https://ollama.com). No build step, no dependencies. Open the HTML and connect to your local models.
+Single-file LLM debug console for [Ollama](https://ollama.com). No build step, no dependencies. Just open the HTML and connect to your local models.
 
 ## Quick Start
 
