@@ -3,120 +3,231 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>LLM Dyno - Console</title>
-
+<title>LLM-Dyno</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&family=DM+Sans:wght@300;400;500;600;700&display=swap');
-
 :root{
-  --bg:#08090d;
-  --bg-panel:#0d1117;
-  --bg-input:#161b22;
-  --bg-msg-user:#1a2332;
-  --bg-msg-ai:#0d1117;
-  --border:#1b2430;
-  --text:#c9d1d9;
-  --text-bright:#f0f6fc;
-  --text-dim:#484f58;
-  --text-code:#7ee787;
-  --accent:#58a6ff;
-  --accent-warm:#f0883e;
-  --accent-green:#3fb950;
-  --accent-red:#f85149;
-  --accent-purple:#bc8cff;
-  --accent-yellow:#d29922;
-  --debug-bg:#0a0c10;
-  --scrollbar:#21262d;
-
-  --font-size:14px;
-  --debug-font-size:11.5px;
-  --debug-width:460px;
+  --bg:#08090d;--bg-panel:#0d1117;--bg-input:#161b22;--bg-msg-user:#1a2332;--bg-msg-ai:#0d1117;
+  --border:#1b2430;--text:#c9d1d9;--text-bright:#f0f6fc;--text-dim:#484f58;--text-code:#7ee787;
+  --accent:#58a6ff;--accent-warm:#f0883e;--accent-green:#3fb950;--accent-red:#f85149;
+  --accent-purple:#bc8cff;--accent-yellow:#d29922;--debug-bg:#0a0c10;--scrollbar:#21262d;
+  --font-size:14px;--debug-font-size:11.5px;--debug-width:520px;
+  --accent-think:#6ca8d8;--bg-thinking:#0a1520;--border-thinking:#1a3a52;
 }
-
 *{margin:0;padding:0;box-sizing:border-box}
-body{
-  background:var(--bg);
-  color:var(--text);
-  font-family:'DM Sans',sans-serif;
-  height:100vh;
-  overflow:hidden;
-  font-size:var(--font-size)
-}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;height:100vh;overflow:hidden;font-size:var(--font-size)}
 
-/* --- layout & styles unchanged from your original --- */
-/* (CSS omitted here for brevity in explanation, but IS PRESENT below) */
+.app{display:grid;grid-template-columns:1fr var(--debug-width);grid-template-rows:48px 1fr;height:100vh}
+.app.debug-closed{grid-template-columns:1fr 0px}
+.app.debug-closed .debug-col{display:none}
+
+.topbar{grid-column:1/-1;grid-row:1;background:var(--bg-panel);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 16px;gap:10px;z-index:10}
+
+.chat-col{grid-column:1;grid-row:2;display:flex;flex-direction:column;min-height:0;overflow:hidden}
+.debug-col{grid-column:2;grid-row:2;display:flex;flex-direction:column;min-height:0;overflow:hidden;background:var(--debug-bg);border-left:1px solid var(--border)}
+
+.topbar .logo{font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:.85em;color:var(--accent);letter-spacing:1px;flex-shrink:0}
+.sep{width:1px;height:20px;background:var(--border);flex-shrink:0}
+.model-select{font-family:'IBM Plex Mono',monospace;font-size:.78em;background:var(--bg-input);border:1px solid var(--border);color:var(--text);padding:5px 10px;border-radius:6px;cursor:pointer;outline:none}
+.spacer{flex:1}
+.top-btn{font-family:'IBM Plex Mono',monospace;font-size:.72em;background:var(--bg-input);border:1px solid var(--border);color:var(--text-dim);padding:5px 12px;border-radius:6px;cursor:pointer;transition:all .2s;white-space:nowrap;flex-shrink:0}
+.top-btn:hover{border-color:var(--accent);color:var(--text)}
+.top-btn.active{border-color:var(--accent-warm);color:var(--accent-warm)}
+.status-dot{width:7px;height:7px;border-radius:50%;display:inline-block;flex-shrink:0}
+.status-dot.connected{background:var(--accent-green);box-shadow:0 0 6px rgba(63,185,80,.4)}
+.status-dot.disconnected{background:var(--accent-red)}
+.status-dot.loading{background:var(--accent-yellow);animation:blink .6s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+.status-label{font-family:'IBM Plex Mono',monospace;font-size:.7em;color:var(--text-dim);flex-shrink:0}
+
+.system-prompt-bar{background:var(--bg-panel);border-bottom:1px solid var(--border);padding:8px 16px;display:flex;gap:8px;align-items:flex-start;flex-shrink:0}
+.sp-label{font-family:'IBM Plex Mono',monospace;font-size:.68em;text-transform:uppercase;letter-spacing:1.5px;color:var(--accent-purple);padding-top:6px;flex-shrink:0}
+.system-prompt-bar textarea{flex:1;background:var(--bg-input);border:1px solid var(--border);border-radius:6px;padding:6px 10px;color:var(--accent-purple);font-family:'IBM Plex Mono',monospace;font-size:.78em;resize:vertical;outline:none;min-height:32px;max-height:120px;line-height:1.5;transition:border-color .2s,opacity .2s}
+.system-prompt-bar textarea:focus{border-color:var(--accent-purple)}
+.sp-toggle{font-family:'IBM Plex Mono',monospace;font-size:.68em;background:none;border:1px solid var(--border);color:var(--text-dim);padding:4px 8px;border-radius:4px;cursor:pointer;flex-shrink:0;margin-top:2px}
+.sp-toggle:hover{border-color:var(--accent-purple);color:var(--accent-purple)}
+.sp-toggle.off{opacity:.4}
+
+.chat-area{flex:1;overflow-y:auto;padding:20px 24px;display:flex;flex-direction:column;gap:4px;min-height:0}
+.chat-area::-webkit-scrollbar{width:6px}
+.chat-area::-webkit-scrollbar-thumb{background:var(--scrollbar);border-radius:3px}
+
+.scroll-lock-indicator{display:none;position:sticky;bottom:0;left:0;right:0;text-align:center;padding:6px;background:linear-gradient(transparent,rgba(8,9,13,.95));z-index:5}
+.scroll-lock-indicator.visible{display:block}
+.scroll-lock-btn{font-family:'IBM Plex Mono',monospace;font-size:.7em;background:var(--bg-input);border:1px solid var(--accent);color:var(--accent);padding:4px 14px;border-radius:12px;cursor:pointer;transition:all .2s}
+.scroll-lock-btn:hover{background:var(--accent);color:#fff}
+
+.msg{max-width:85%;padding:14px 18px;border-radius:12px;line-height:1.65;animation:fadeIn .25s ease;word-wrap:break-word}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.msg.user{background:var(--bg-msg-user);align-self:flex-end;border:1px solid rgba(37,99,235,.15);border-bottom-right-radius:4px;color:var(--text-bright)}
+.msg.assistant{background:var(--bg-msg-ai);align-self:flex-start;border:1px solid var(--border);border-bottom-left-radius:4px}
+.role-label{font-family:'IBM Plex Mono',monospace;font-size:.65em;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px;display:block}
+.msg.user .role-label{color:var(--accent)}
+.msg.assistant .role-label{color:var(--accent-warm)}
+.msg-text{white-space:pre-wrap}
+.msg .meta{font-family:'IBM Plex Mono',monospace;font-size:.65em;color:var(--text-dim);margin-top:8px;display:flex;gap:12px;flex-wrap:wrap}
+.meta-item{white-space:nowrap}.meta-item.good{color:var(--accent-green)}.meta-item.warn{color:var(--accent-yellow)}
+.typing-indicator{display:inline-flex;gap:4px;padding:4px 0}
+.typing-indicator span{width:6px;height:6px;background:var(--text-dim);border-radius:50%;animation:typingDot 1.4s infinite}
+.typing-indicator span:nth-child(2){animation-delay:.2s}
+.typing-indicator span:nth-child(3){animation-delay:.4s}
+@keyframes typingDot{0%,60%,100%{transform:translateY(0);opacity:.4}30%{transform:translateY(-6px);opacity:1}}
+
+/* Thinking blocks in chat */
+.thinking-block{background:var(--bg-thinking);border:1px solid var(--border-thinking);border-left:3px solid var(--accent-think);border-radius:6px;margin:8px 0;overflow:hidden}
+.thinking-header{display:flex;align-items:center;gap:8px;padding:8px 12px;cursor:pointer;user-select:none;background:rgba(88,166,255,.05);transition:background .15s}
+.thinking-header:hover{background:rgba(88,166,255,.1)}
+.thinking-label{font-family:'IBM Plex Mono',monospace;font-size:.7em;font-weight:600;color:var(--accent-think);text-transform:uppercase;letter-spacing:.5px;flex:1}
+.think-inline-stats{font-weight:400;color:var(--text-dim);text-transform:none;letter-spacing:0;font-size:.9em}
+.thinking-chevron{font-size:.7em;color:var(--text-dim);transition:transform .2s}
+.thinking-chevron.collapsed{transform:rotate(-90deg)}
+.thinking-body{padding:10px 14px;font-size:calc(var(--font-size) - 1px);color:var(--text-dim);line-height:1.5;font-family:'IBM Plex Mono',monospace;white-space:pre-wrap;word-wrap:break-word;border-top:1px solid var(--border-thinking);display:none;max-height:300px;overflow-y:auto}
+.thinking-body.open{display:block}
+.thinking-block.compact{border-left-width:2px;margin:4px 0}
+.thinking-block.compact .thinking-header{padding:5px 10px}
+.thinking-block.compact .thinking-label{font-size:.62em}
+
+.input-area{flex-shrink:0;padding:12px 24px 16px;border-top:1px solid var(--border);background:var(--bg-panel)}
+.params-bar{display:flex;gap:14px;margin-bottom:8px;flex-wrap:wrap;align-items:center}
+.param-group{display:flex;align-items:center;gap:5px;font-family:'IBM Plex Mono',monospace;font-size:.7em;color:var(--text-dim)}
+.param-group label{cursor:pointer;user-select:none}
+.param-group label:hover{color:var(--text)}
+.param-group input[type="range"]{width:70px;accent-color:var(--accent);cursor:pointer}
+.param-group input[type="number"]{width:52px;background:var(--bg-input);border:1px solid var(--border);color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:1em;padding:2px 4px;border-radius:4px;outline:none;text-align:center}
+.param-group input[type="number"]:focus{border-color:var(--accent)}
+.input-row{display:flex;gap:10px;align-items:flex-end}
+.input-wrapper{flex:1}
+.input-wrapper textarea{width:100%;background:var(--bg-input);border:1px solid var(--border);border-radius:10px;padding:12px 16px;color:var(--text-bright);font-family:'DM Sans',sans-serif;resize:none;outline:none;min-height:46px;max-height:200px;line-height:1.5;transition:border-color .2s}
+.input-wrapper textarea:focus{border-color:var(--accent)}
+.input-wrapper textarea::placeholder{color:var(--text-dim)}
+.send-btn{width:46px;height:46px;border-radius:10px;background:var(--accent);border:none;color:#fff;font-size:1.2em;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.send-btn:hover{background:#4c8fef;transform:scale(1.05)}
+.send-btn.stop{background:var(--accent-red)}
+.send-btn.stop:hover{background:#e5443d}
+.input-hints{display:flex;gap:16px;margin-top:6px;font-family:'IBM Plex Mono',monospace;font-size:.63em;color:var(--text-dim)}
+.input-hints kbd{background:var(--bg-input);border:1px solid var(--border);padding:0 4px;border-radius:3px}
+
+.debug-tabs{display:flex;background:var(--bg-panel);border-bottom:1px solid var(--border);flex-shrink:0;overflow-x:auto}
+.debug-tab{font-family:'IBM Plex Mono',monospace;font-size:var(--debug-font-size);padding:10px 12px;color:var(--text-dim);cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;white-space:nowrap;flex-shrink:0}
+.debug-tab:hover{color:var(--text)}
+.debug-tab.active{color:var(--accent-warm);border-bottom-color:var(--accent-warm)}
+.debug-tab.has-thinking{color:var(--accent-think)}
+.debug-tab.has-thinking.active{color:var(--accent-think);border-bottom-color:var(--accent-think)}
+.debug-content{flex:1;overflow-y:auto;padding:14px;font-family:'IBM Plex Mono',monospace;font-size:var(--debug-font-size);line-height:1.7;color:var(--text-dim);min-height:0}
+.debug-content::-webkit-scrollbar{width:5px}
+.debug-content::-webkit-scrollbar-thumb{background:var(--scrollbar);border-radius:3px}
+.entry{margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid rgba(27,36,48,.5)}
+.entry:last-child{border-bottom:none}
+.timestamp{color:var(--text-dim);font-size:.85em}
+.label{display:inline-block;padding:1px 6px;border-radius:3px;font-size:.85em;margin-right:4px}
+.label.req{background:rgba(88,166,255,.12);color:var(--accent)}
+.label.res{background:rgba(63,185,80,.12);color:var(--accent-green)}
+.label.err{background:rgba(248,81,73,.12);color:var(--accent-red)}
+.label.sys{background:rgba(188,140,255,.12);color:var(--accent-purple)}
+.label.think{background:rgba(108,168,216,.12);color:var(--accent-think)}
+.debug-content pre{background:rgba(13,17,23,.5);border:1px solid var(--border);border-radius:6px;padding:10px;margin-top:6px;overflow-x:auto;white-space:pre-wrap;word-break:break-word;color:var(--text);font-size:.92em;max-height:400px;overflow-y:auto}
+.token-stream{display:flex;flex-wrap:wrap;gap:1px}
+.token{padding:1px 2px;border-radius:2px;background:rgba(126,231,135,.06);border:1px solid rgba(126,231,135,.08);color:var(--text-code);font-size:.88em;animation:tokenFade .15s;white-space:pre;cursor:default}
+.token:hover{background:rgba(126,231,135,.15);border-color:rgba(126,231,135,.3)}
+.token.think-token{background:rgba(108,168,216,.08);border-color:rgba(108,168,216,.12);color:var(--accent-think)}
+.token.think-token:hover{background:rgba(108,168,216,.2);border-color:rgba(108,168,216,.3)}
+.token-sep{width:100%;height:1px;background:var(--border);margin:8px 0}
+@keyframes tokenFade{from{background:rgba(126,231,135,.25)}}
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px}
+.stat-box{background:var(--bg-panel);border:1px solid var(--border);border-radius:8px;padding:12px;text-align:center}
+.stat-box .stat-val{font-size:1.5em;font-weight:600;color:var(--text-bright)}
+.stat-box .stat-label{font-size:.78em;color:var(--text-dim);margin-top:2px}
+.perf-bar{height:4px;background:var(--border);border-radius:2px;margin-top:4px;overflow:hidden}
+.perf-bar .fill{height:100%;border-radius:2px;transition:width .3s}
+.msg-entry{padding:6px 8px;border-radius:4px;margin-bottom:3px;cursor:pointer;transition:background .15s;border-left:3px solid transparent}
+.msg-entry:hover{background:rgba(255,255,255,.03)}
+.msg-entry.role-user{border-left-color:var(--accent)}
+.msg-entry.role-assistant{border-left-color:var(--accent-warm)}
+.msg-entry.role-system{border-left-color:var(--accent-purple)}
+.me-role{font-weight:600;font-size:.85em}
+.me-role.user{color:var(--accent)}.me-role.assistant{color:var(--accent-warm)}.me-role.system{color:var(--accent-purple)}
+.me-preview{color:var(--text-dim);font-size:.88em}
+.me-full{display:none;margin-top:6px}
+.msg-entry.expanded .me-full{display:block}
+.msg-entry.expanded .me-preview{display:none}
+.timeline-entry{display:flex;align-items:flex-start;gap:8px;margin-bottom:8px;padding-left:12px;border-left:2px solid var(--border)}
+.te-time{font-size:.82em;color:var(--text-dim);min-width:65px;flex-shrink:0}
+.te-event{color:var(--text);font-size:.88em}
+
+/* Thinking debug tab styles */
+.think-entry{margin-bottom:16px;padding:12px;background:var(--bg-thinking);border:1px solid var(--border-thinking);border-left:3px solid var(--accent-think);border-radius:6px}
+.think-entry-header{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.think-entry-label{font-size:.78em;color:var(--accent-think);font-weight:600}
+.think-entry-meta{font-size:.72em;color:var(--text-dim)}
+.think-entry-content{white-space:pre-wrap;word-wrap:break-word;color:var(--text);font-size:.88em;line-height:1.6;max-height:400px;overflow-y:auto;padding:8px;background:rgba(0,0,0,.2);border-radius:4px}
+.think-empty{color:var(--text-dim);text-align:center;padding:40px 20px}
+.think-empty .icon{font-size:2em;margin-bottom:12px;opacity:.5}
+.think-stats{display:flex;gap:16px;padding:10px;background:var(--bg-panel);border:1px solid var(--border);border-radius:6px;margin-bottom:14px;font-size:.82em}
+.think-stats span{color:var(--text-dim)}
+.think-stats .val{color:var(--accent-think);font-weight:500}
+
+.settings-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:100;align-items:center;justify-content:center}
+.settings-overlay.open{display:flex}
+.settings-panel{background:var(--bg-panel);border:1px solid var(--border);border-radius:12px;padding:28px;width:420px;max-height:80vh;overflow-y:auto}
+.settings-panel h3{font-family:'IBM Plex Mono',monospace;font-size:.9em;color:var(--text-bright);margin-bottom:20px}
+.setting-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;font-family:'IBM Plex Mono',monospace;font-size:.78em;color:var(--text)}
+.setting-row label{color:var(--text-dim)}
+.setting-row input[type="range"]{width:120px;accent-color:var(--accent)}
+.setting-row .sval{min-width:36px;text-align:right;color:var(--text)}
+.setting-row select{background:var(--bg-input);border:1px solid var(--border);color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:1em;padding:3px 6px;border-radius:4px;outline:none}
+.settings-close{font-family:'IBM Plex Mono',monospace;font-size:.78em;background:var(--accent);border:none;color:#fff;padding:6px 18px;border-radius:6px;cursor:pointer;margin-top:12px;display:block;width:100%}
+.settings-close:hover{background:#4c8fef}
+.settings-reset{font-family:'IBM Plex Mono',monospace;font-size:.72em;background:none;border:1px solid var(--border);color:var(--text-dim);padding:5px 14px;border-radius:6px;cursor:pointer;margin-top:8px;display:block;width:100%;transition:all .2s}
+.settings-reset:hover{border-color:var(--accent-red);color:var(--accent-red)}
 </style>
 </head>
-
 <body>
-
-<!-- ====================== APP ====================== -->
 <div class="app" id="app">
-  <!-- TOP BAR -->
   <div class="topbar">
-    <span class="logo">LLM DYNO</span><div class="sep"></div>
+    <span class="logo">LLM-DYNO</span><div class="sep"></div>
     <select class="model-select" id="modelSelect"></select>
-    <button class="top-btn" id="refreshModels">↻</button>
+    <button class="top-btn" id="refreshModels">&#x21bb;</button>
     <span class="status-dot disconnected" id="statusDot"></span>
     <span class="status-label" id="statusLabel">...</span>
     <div class="spacer"></div>
     <button class="top-btn" id="clearBtn">clear</button>
     <button class="top-btn" id="exportBtn">export</button>
-    <button class="top-btn" id="settingsBtn">⚙ settings</button>
-    <button class="top-btn active" id="debugToggle">◧ debug</button>
+    <button class="top-btn" id="settingsBtn">&#x2699; settings</button>
+    <button class="top-btn active" id="debugToggle">&#x25E7; debug</button>
   </div>
 
-  <!-- CHAT COLUMN -->
   <div class="chat-col">
     <div class="system-prompt-bar">
       <span class="sp-label">SYS</span>
       <textarea id="systemPromptInput" rows="1">You are a helpful assistant.</textarea>
       <button class="sp-toggle" id="spToggle">ON</button>
     </div>
-
     <div class="chat-area" id="chatArea">
       <div class="scroll-lock-indicator" id="scrollLockInd">
-        <button class="scroll-lock-btn" id="scrollLockBtn">↓ Resume auto-scroll</button>
+        <button class="scroll-lock-btn" id="scrollLockBtn">&#x2193; Resume auto-scroll</button>
       </div>
     </div>
-
     <div class="input-area">
       <div class="params-bar">
-        <div class="param-group">
-          <label>temp</label>
-          <input type="range" min="0" max="200" id="tempSlider">
-          <input type="number" min="0" max="2" step="0.1" id="tempInput">
-        </div>
-        <div class="param-group"><label>max_tok</label><input type="number" id="maxTokInput"></div>
-        <div class="param-group">
-          <label>top_p</label>
-          <input type="range" min="0" max="100" id="topPSlider">
-          <input type="number" min="0" max="1" step="0.05" id="topPInput">
-        </div>
-        <div class="param-group"><label>top_k</label><input type="number" id="topKInput"></div>
-        <div class="param-group"><label>rep_pen</label><input type="number" step="0.05" id="repeatPenInput"></div>
-        <div class="param-group"><label>seed</label><input type="number" id="seedInput"></div>
+        <div class="param-group"><label>temp</label><input type="range" min="0" max="200" value="70" id="tempSlider"><input type="number" min="0" max="2" step="0.1" value="0.7" id="tempInput"></div>
+        <div class="param-group"><label>max_tok</label><input type="number" min="1" max="32768" value="1024" id="maxTokInput"></div>
+        <div class="param-group"><label>top_p</label><input type="range" min="0" max="100" value="90" id="topPSlider"><input type="number" min="0" max="1" step="0.05" value="0.9" id="topPInput"></div>
+        <div class="param-group"><label>top_k</label><input type="number" min="0" max="200" value="40" id="topKInput"></div>
+        <div class="param-group"><label>rep_pen</label><input type="number" min="0" max="2" step="0.05" value="1.1" id="repeatPenInput"></div>
+        <div class="param-group"><label>seed</label><input type="number" min="-1" max="999999" value="-1" id="seedInput" title="-1 = random"></div>
       </div>
-
       <div class="input-row">
-        <div class="input-wrapper">
-          <textarea id="userInput" placeholder="Chat..." rows="1"></textarea>
-        </div>
-        <button class="send-btn" id="sendBtn">▶</button>
+        <div class="input-wrapper"><textarea id="userInput" placeholder="Talk to the local LLM..." rows="1"></textarea></div>
+        <button class="send-btn" id="sendBtn">&#x25B6;</button>
       </div>
-
-      <div class="input-hints">
-        <span><kbd>Enter</kbd> send</span>
-        <span><kbd>Shift+Enter</kbd> newline</span>
-        <span><kbd>Esc</kbd> stop</span>
-      </div>
+      <div class="input-hints"><span><kbd>Enter</kbd> send</span><span><kbd>Shift+Enter</kbd> newline</span><span><kbd>Esc</kbd> stop</span><span>seed -1 = random</span></div>
     </div>
   </div>
 
-  <!-- DEBUG COLUMN -->
   <div class="debug-col">
     <div class="debug-tabs">
       <div class="debug-tab active" data-tab="stream">Tokens</div>
+      <div class="debug-tab" data-tab="thinking" id="thinkingTab">Thinking</div>
       <div class="debug-tab" data-tab="raw">Raw API</div>
       <div class="debug-tab" data-tab="stats">Stats</div>
       <div class="debug-tab" data-tab="messages">Msgs[]</div>
@@ -127,129 +238,840 @@ body{
   </div>
 </div>
 
-<!-- ====================== SETTINGS ====================== -->
 <div class="settings-overlay" id="settingsOverlay">
   <div class="settings-panel">
-    <h3>Console Settings</h3>
-
-    <div class="setting-row">
-      <label>Chat font size</label>
-      <input type="range" min="10" max="22" id="setChatFont">
-      <span class="sval" id="setChatFontVal"></span>
-    </div>
-
-    <div class="setting-row">
-      <label>Debug font size</label>
-      <input type="range" min="9" max="16" id="setDebugFont">
-      <span class="sval" id="setDebugFontVal"></span>
-    </div>
-
-    <div class="setting-row">
-      <label>Debug panel width</label>
-      <input type="range" min="280" max="700" id="setDebugWidth">
-      <span class="sval" id="setDebugWidthVal"></span>
-    </div>
-
-    <div class="setting-row">
-      <label>Ollama URL</label>
-      <input type="text" id="setOllamaUrl">
-    </div>
-
-    <div class="setting-row">
-      <label>Auto-scroll threshold</label>
-      <input type="range" min="20" max="200" id="setScrollThresh">
-      <span class="sval" id="setScrollThreshVal"></span>
-    </div>
-
+    <h3>LLM-Dyno Settings</h3>
+    <div class="setting-row"><label>Ollama URL</label><input type="text" id="setOllamaUrl" value="http://localhost:11434" style="background:var(--bg-input);border:1px solid var(--border);color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:.9em;padding:3px 6px;border-radius:4px;outline:none;width:220px"></div>
+    <div class="setting-row"><label>Chat font size</label><input type="range" min="10" max="22" value="14" id="setChatFont"><span class="sval" id="setChatFontVal">14px</span></div>
+    <div class="setting-row"><label>Debug font size</label><input type="range" min="9" max="16" value="11" id="setDebugFont"><span class="sval" id="setDebugFontVal">11.5px</span></div>
+    <div class="setting-row"><label>Debug panel width</label><input type="range" min="280" max="700" value="520" id="setDebugWidth"><span class="sval" id="setDebugWidthVal">520px</span></div>
+    <div class="setting-row"><label>Auto-scroll threshold</label><input type="range" min="20" max="200" value="80" id="setScrollThresh"><span class="sval" id="setScrollThreshVal">80px</span></div>
     <button class="settings-close" id="settingsClose">Done</button>
+    <button class="settings-reset" id="settingsReset">Reset to defaults</button>
   </div>
 </div>
 
-<!-- ====================== SCRIPT ====================== -->
 <script>
-/* ---------- SETTINGS HELPERS ---------- */
-const DEFAULT_OLLAMA_URL = 'http://localhost:11434';
+// -------------------------------------------------------
+//  LLM-Dyno  -  Local Ollama Chat Console
+//  Single-file HTML app. No build step, no deps.
+//  Point it at any Ollama instance and go.
+// -------------------------------------------------------
 
-function loadSetting(k, d){ try{ return localStorage.getItem(k) ?? d }catch{ return d } }
-function saveSetting(k, v){ try{ localStorage.setItem(k, v) }catch{} }
+const DEFAULTS = {
+  ollamaUrl: 'http://localhost:11434',
+  chatFont: 14,
+  debugFont: 11.5,
+  debugWidth: 520,
+  scrollThreshold: 80,
+  debugOpen: true
+};
 
-/* ---------- GLOBAL STATE ---------- */
-let OLLAMA_BASE = loadSetting('ollama_url', DEFAULT_OLLAMA_URL);
-let scrollThreshold = parseInt(loadSetting('scroll_threshold', '80'));
+const STORAGE_KEY = 'llm-dyno-settings';
 
-let messages=[], systemPromptEnabled=true, currentAbort=null;
-let debugTab='stream', tokenLog=[], rawLog=[], timelineLog=[];
-let stats={totalTokens:0,totalPromptTokens:0,totalTime:0,requests:0,perRequest:[]};
-let currentModelInfo=null, isGenerating=false, userScrolledUp=false;
-
-/* ---------- DOM SHORTCUTS ---------- */
-const $=id=>document.getElementById(id);
-const chatArea=$('chatArea'), userInput=$('userInput'), sendBtn=$('sendBtn');
-const modelSelect=$('modelSelect'), debugContent=$('debugContent');
-const statusDot=$('statusDot'), statusLabel=$('statusLabel'), sysInput=$('systemPromptInput');
-
-/* ---------- INIT UI FROM SETTINGS ---------- */
-function initSettings(){
-  const chatFont = loadSetting('chat_font','14');
-  const debugFont = loadSetting('debug_font','11.5');
-  const debugWidth = loadSetting('debug_width','460');
-
-  document.documentElement.style.setProperty('--font-size',chatFont+'px');
-  document.documentElement.style.setProperty('--debug-font-size',debugFont+'px');
-  document.documentElement.style.setProperty('--debug-width',debugWidth+'px');
-
-  $('setChatFont').value=chatFont;
-  $('setChatFontVal').textContent=chatFont+'px';
-
-  $('setDebugFont').value=debugFont;
-  $('setDebugFontVal').textContent=debugFont+'px';
-
-  $('setDebugWidth').value=debugWidth;
-  $('setDebugWidthVal').textContent=debugWidth+'px';
-
-  $('setScrollThresh').value=scrollThreshold;
-  $('setScrollThreshVal').textContent=scrollThreshold+'px';
-
-  $('setOllamaUrl').value=OLLAMA_BASE;
+function loadSettings() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) return Object.assign({}, DEFAULTS, JSON.parse(raw));
+  } catch (e) {}
+  return Object.assign({}, DEFAULTS);
 }
 
-/* ---------- SETTINGS EVENTS ---------- */
-$('setChatFont').oninput=e=>{
-  document.documentElement.style.setProperty('--font-size',e.target.value+'px');
-  $('setChatFontVal').textContent=e.target.value+'px';
-  saveSetting('chat_font',e.target.value);
-};
+function saveSettings(s) {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); } catch (e) {}
+}
 
-$('setDebugFont').oninput=e=>{
-  document.documentElement.style.setProperty('--debug-font-size',e.target.value+'px');
-  $('setDebugFontVal').textContent=e.target.value+'px';
-  saveSetting('debug_font',e.target.value);
-};
+let settings = loadSettings();
 
-$('setDebugWidth').oninput=e=>{
-  document.documentElement.style.setProperty('--debug-width',e.target.value+'px');
-  $('setDebugWidthVal').textContent=e.target.value+'px';
-  saveSetting('debug_width',e.target.value);
-};
+let OLLAMA_BASE = settings.ollamaUrl;
+let messages = [];
+let systemPromptEnabled = true;
+let currentAbort = null;
+let debugTab = 'stream';
+let tokenLog = [];
+let rawLog = [];
+let timelineLog = [];
+let thinkingLog = []; // Stores thinking blocks: {content, startTime, endTime, requestIndex}
+let currentModelInfo = null;
+let isGenerating = false;
+let stats = { totalTokens:0, totalPromptTokens:0, totalTime:0, requests:0, perRequest:[] };
+let userScrolledUp = false;
+let scrollThreshold = settings.scrollThreshold;
 
-$('setScrollThresh').oninput=e=>{
-  scrollThreshold=parseInt(e.target.value);
-  $('setScrollThreshVal').textContent=e.target.value+'px';
-  saveSetting('scroll_threshold',e.target.value);
-};
+const $ = id => document.getElementById(id);
+const chatArea = $('chatArea');
+const userInput = $('userInput');
+const sendBtn = $('sendBtn');
+const modelSelect = $('modelSelect');
+const debugContent = $('debugContent');
+const statusDot = $('statusDot');
+const statusLabel = $('statusLabel');
+const sysInput = $('systemPromptInput');
+const scrollInd = $('scrollLockInd');
+const scrollBtn = $('scrollLockBtn');
 
-$('setOllamaUrl').onchange=e=>{
-  const v=e.target.value.trim().replace(/\/$/,'');
-  if(!v) return;
-  OLLAMA_BASE=v;
-  saveSetting('ollama_url',v);
+function applySettings(s) {
+  OLLAMA_BASE = s.ollamaUrl;
+  scrollThreshold = s.scrollThreshold;
+
+  document.documentElement.style.setProperty('--font-size', s.chatFont + 'px');
+  document.documentElement.style.setProperty('--debug-font-size', s.debugFont + 'px');
+  document.documentElement.style.setProperty('--debug-width', s.debugWidth + 'px');
+
+  $('setOllamaUrl').value = s.ollamaUrl;
+  $('setChatFont').value = s.chatFont;
+  $('setChatFontVal').textContent = s.chatFont + 'px';
+  $('setDebugFont').value = Math.round(s.debugFont);
+  $('setDebugFontVal').textContent = s.debugFont + 'px';
+  $('setDebugWidth').value = s.debugWidth;
+  $('setDebugWidthVal').textContent = s.debugWidth + 'px';
+  $('setScrollThresh').value = s.scrollThreshold;
+  $('setScrollThreshVal').textContent = s.scrollThreshold + 'px';
+
+  if (!s.debugOpen) {
+    $('app').classList.add('debug-closed');
+    $('debugToggle').classList.remove('active');
+  } else {
+    $('app').classList.remove('debug-closed');
+    $('debugToggle').classList.add('active');
+  }
+}
+
+applySettings(settings);
+
+function persistCurrent() {
+  settings.ollamaUrl = OLLAMA_BASE;
+  settings.chatFont = parseFloat($('setChatFont').value);
+  settings.debugFont = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--debug-font-size'));
+  settings.debugWidth = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--debug-width'));
+  settings.scrollThreshold = scrollThreshold;
+  settings.debugOpen = !$('app').classList.contains('debug-closed');
+  saveSettings(settings);
+}
+
+function setStatus(s, t) { statusDot.className = 'status-dot ' + s; statusLabel.textContent = t; }
+function esc(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function fmtBytes(b) { return b > 1e9 ? (b/1e9).toFixed(1)+' GB' : b > 1e6 ? (b/1e6).toFixed(0)+' MB' : b+' B'; }
+function timeStr(t) { return new Date(t).toLocaleTimeString(); }
+function autoResize(el) { el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, el === sysInput ? 120 : 200) + 'px'; }
+
+// Smart auto-scroll
+function isNearBottom() { return (chatArea.scrollHeight - chatArea.scrollTop - chatArea.clientHeight) < scrollThreshold; }
+
+chatArea.addEventListener('scroll', () => {
+  if (isGenerating) {
+    if (isNearBottom()) { userScrolledUp = false; scrollInd.classList.remove('visible'); }
+    else { userScrolledUp = true; scrollInd.classList.add('visible'); }
+  }
+});
+
+chatArea.addEventListener('wheel', (e) => {
+  if (isGenerating && e.deltaY < 0) { userScrolledUp = true; scrollInd.classList.add('visible'); }
+}, { passive: true });
+
+scrollBtn.addEventListener('click', () => {
+  userScrolledUp = false; scrollInd.classList.remove('visible'); chatArea.scrollTop = chatArea.scrollHeight;
+});
+
+function smartScroll() { if (!userScrolledUp) chatArea.scrollTop = chatArea.scrollHeight; }
+
+// Logging
+function addRawLog(type, label, data) { rawLog.push({ type, label, data, time: Date.now() }); if (debugTab === 'raw') renderDebug(); }
+function addTimeline(event) { timelineLog.push({ event, time: Date.now() }); if (debugTab === 'timeline') renderDebug(); }
+function addTokenLog(token, raw, isThinking) {
+  tokenLog.push({ type: 'token', token, time: Date.now(), raw, isThinking: !!isThinking });
+  if (debugTab === 'stream') renderTokenAppend(token, isThinking);
+}
+
+let streamEl = null;
+function renderTokenAppend(token, isThinking) {
+  if (!streamEl) { debugContent.innerHTML = '<div class="token-stream" id="tsc"></div>'; streamEl = document.getElementById('tsc'); }
+  const s = document.createElement('span');
+  s.className = 'token' + (isThinking ? ' think-token' : '');
+  s.textContent = token;
+  s.title = 't+' + (Date.now() - (tokenLog[0]?.time || Date.now())) + 'ms' + (isThinking ? ' [thinking]' : '');
+  streamEl.appendChild(s); debugContent.scrollTop = debugContent.scrollHeight;
+}
+
+// Thinking tag parsing for display
+function parseThinkingTags(text) {
+  const parts = [];
+  const regex = /<think>([\s\S]*?)<\/think>/gi;
+  let lastIndex = 0, match;
+  while ((match = regex.exec(text)) !== null) {
+    if (match.index > lastIndex) parts.push({ type: 'text', content: text.slice(lastIndex, match.index) });
+    parts.push({ type: 'thinking', content: match[1].trim() });
+    lastIndex = match.index + match[0].length;
+  }
+  if (lastIndex < text.length) parts.push({ type: 'text', content: text.slice(lastIndex) });
+  return parts.length > 0 ? parts : [{ type: 'text', content: text }];
+}
+
+// Check if we're currently inside an open <think> tag (for streaming)
+function isInsideThinkTag(text) {
+  const opens = (text.match(/<think>/gi) || []).length;
+  const closes = (text.match(/<\/think>/gi) || []).length;
+  return opens > closes;
+}
+
+function renderThinkingBlockHTML(content, id, opts) {
+  opts = opts || {};
+  const compact = opts.compact !== false;
+  const tokCount = opts.tokens || 0;
+  const elapsed = opts.elapsed || 0;
+  const tps = (tokCount && elapsed > 0) ? (tokCount / (elapsed / 1000)).toFixed(1) : '';
+  const statsStr = tokCount ? ' · ' + tokCount + ' tok' + (elapsed ? ' · ' + (elapsed / 1000).toFixed(1) + 's' : '') + (tps ? ' · ' + tps + ' t/s' : '') : '';
+  const chevClass = compact ? 'thinking-chevron collapsed' : 'thinking-chevron';
+  const bodyClass = compact ? 'thinking-body' : 'thinking-body open';
+  const blockClass = 'thinking-block' + (compact ? ' compact' : '');
+  return '<div class="' + blockClass + '"><div class="thinking-header" onclick="toggleThinkBlock(\'' + id + '\')">' +
+    '<span class="thinking-label">Thinking<span class="think-inline-stats">' + statsStr + '</span></span>' +
+    '<span class="' + chevClass + '" id="' + id + '-chev">&#x25BC;</span></div>' +
+    '<div class="' + bodyClass + '" id="' + id + '">' + esc(content) + '</div></div>';
+}
+
+function toggleThinkBlock(id) {
+  const body = $(id);
+  const chev = $(id + '-chev');
+  if (body) { body.classList.toggle('open'); }
+  if (chev) { chev.classList.toggle('collapsed'); }
+}
+
+function renderMsgContent(text) {
+  const parts = parseThinkingTags(text);
+  if (parts.length === 1 && parts[0].type === 'text') return esc(text);
+  let html = '';
+  parts.forEach((p, i) => {
+    if (p.type === 'thinking') {
+      html += renderThinkingBlockHTML(p.content, 'tb-' + Date.now() + '-' + i);
+    } else {
+      html += '<span style="white-space:pre-wrap">' + esc(p.content) + '</span>';
+    }
+  });
+  return html;
+}
+
+function appendChatMsg(role, content, opts) {
+  opts = opts || {};
+  const streaming = opts.streaming || false;
+  const label = opts.label || role;
+  const d = document.createElement('div'); d.className = 'msg ' + role;
+  let h = '<span class="role-label">' + esc(label) + '</span>';
+  if (streaming) {
+    h += '<span class="msg-text"><span class="typing-indicator"><span></span><span></span><span></span></span></span>';
+  } else {
+    const hasThinking = /<think>/i.test(content);
+    h += '<span class="msg-text">' + (hasThinking ? renderMsgContent(content) : esc(content)) + '</span>';
+  }
+  if (role === 'assistant') h += '<div class="meta"></div>';
+  d.innerHTML = h;
+  chatArea.insertBefore(d, scrollInd);
+  smartScroll();
+  return d;
+}
+
+function setGenerating(v) {
+  isGenerating = v; sendBtn.classList.toggle('stop', v); sendBtn.innerHTML = v ? '&#x23F9;' : '&#x25B6;';
+  if (!v) { userScrolledUp = false; scrollInd.classList.remove('visible'); }
+}
+
+// Update thinking tab indicator
+function updateThinkingTabState() {
+  const tab = $('thinkingTab');
+  if (thinkingLog.length > 0) {
+    tab.classList.add('has-thinking');
+  } else {
+    tab.classList.remove('has-thinking');
+  }
+}
+
+async function refreshModels() {
+  try {
+    setStatus('loading', 'connecting...');
+    const r = await fetch(OLLAMA_BASE + '/api/tags');
+    const d = await r.json();
+    modelSelect.innerHTML = '';
+    d.models.forEach(m => {
+      const o = document.createElement('option');
+      o.value = m.name; o.textContent = m.name + ' (' + fmtBytes(m.size) + ')';
+      modelSelect.appendChild(o);
+    });
+    setStatus('connected', d.models.length + ' model' + (d.models.length !== 1 ? 's' : ''));
+    addRawLog('sys', 'Connected', { url: OLLAMA_BASE, models: d.models.map(m => m.name) });
+    addTimeline('Connected to Ollama');
+    if (d.models.length > 0) fetchModelInfo(d.models[0].name);
+  } catch (e) {
+    setStatus('disconnected', 'cannot reach Ollama');
+    addRawLog('err', 'Connection failed', { error: e.message });
+    addTimeline('Failed: ' + e.message);
+  }
+}
+
+async function fetchModelInfo(name) {
+  try {
+    const r = await fetch(OLLAMA_BASE + '/api/show', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }) });
+    currentModelInfo = await r.json();
+    addRawLog('sys', 'Model: ' + name, currentModelInfo);
+    if (debugTab === 'model') renderDebug();
+  } catch (e) { currentModelInfo = null; }
+}
+modelSelect.addEventListener('change', () => fetchModelInfo(modelSelect.value));
+
+async function sendMessage() {
+  const text = userInput.value.trim();
+  if (!text || isGenerating) return;
+  userInput.value = ''; autoResize(userInput); userScrolledUp = false; scrollInd.classList.remove('visible');
+
+  messages.push({ role: 'user', content: text });
+  appendChatMsg('user', text);
+  addTimeline('User: "' + text.slice(0, 60) + (text.length > 60 ? '...' : '') + '"');
+
+  const model = modelSelect.value;
+  // Strip tag/size suffix for display: "deepseek-r1:8b" -> "deepseek-r1:8b"
+  const modelLabel = model.split(' ')[0]; // in case option text leaks
+
+  const options = {
+    temperature: parseFloat($('tempInput').value),
+    num_predict: parseInt($('maxTokInput').value),
+    top_p: parseFloat($('topPInput').value),
+    top_k: parseInt($('topKInput').value),
+    repeat_penalty: parseFloat($('repeatPenInput').value)
+  };
+  const seed = parseInt($('seedInput').value);
+  if (seed >= 0) options.seed = seed;
+
+  const allMsgs = [];
+  if (systemPromptEnabled && sysInput.value.trim()) allMsgs.push({ role: 'system', content: sysInput.value.trim() });
+  allMsgs.push(...messages);
+
+  const reqBody = { model, messages: allMsgs, stream: true, options };
+  addRawLog('req', 'POST /api/chat -> ' + model, reqBody);
+  addTimeline('Request -> ' + model);
+  tokenLog.push({ type: 'separator', time: Date.now() });
+
+  const msgEl = appendChatMsg('assistant', '', { streaming: true, label: modelLabel });
+  const contentEl = msgEl.querySelector('.msg-text');
+  const metaEl = msgEl.querySelector('.meta');
+  setGenerating(true);
+
+  let full = '', thinkFull = '', tokCount = 0, thinkTokCount = 0;
+  let startTime = performance.now(), firstTokTime = null, lastData = null;
+  let thinkStartTime = null;
+  let insideThink = false;     // For inline <think> tag tracking
+  let ollamaThinking = false;  // For Ollama's separate thinking field
+  let currentThinkContent = '';
+
+  try {
+    const ctrl = new AbortController(); currentAbort = ctrl;
+    const res = await fetch(OLLAMA_BASE + '/api/chat', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(reqBody), signal: ctrl.signal
+    });
+    addTimeline('HTTP ' + res.status + ' - streaming');
+    const reader = res.body.getReader(), dec = new TextDecoder();
+    let buf = '';
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      const lines = buf.split('\n');
+      buf = lines.pop(); // keep incomplete line in buffer
+      for (const line of lines) {
+        if (!line.trim()) continue;
+        try {
+          const data = JSON.parse(line);
+
+          // --- Ollama thinking field (separate from content) ---
+          // Newer Ollama sends thinking in data.message.thinking or similar fields
+          const thinkTok = data.message?.thinking;
+          const contentTok = data.message?.content;
+          const hasThinkField = thinkTok !== undefined && thinkTok !== null && thinkTok !== '';
+          const hasContent = contentTok !== undefined && contentTok !== null && contentTok !== '';
+
+          if (hasThinkField) {
+            // Ollama is sending thinking via separate field
+            if (!ollamaThinking) {
+              ollamaThinking = true;
+              thinkStartTime = performance.now();
+              addTimeline('Thinking started (Ollama thinking field)');
+            }
+            thinkFull += thinkTok;
+            currentThinkContent += thinkTok;
+            thinkTokCount++;
+            tokCount++;
+            if (!firstTokTime) { firstTokTime = performance.now(); addTimeline('TTFT: ' + (firstTokTime - startTime).toFixed(0) + 'ms'); }
+
+            // Show compact collapsed thinking indicator in chat
+            const liveElapsed = performance.now() - thinkStartTime;
+            const liveTps = liveElapsed > 0 ? (thinkTokCount / (liveElapsed / 1000)).toFixed(1) : '0';
+            let html = '<div class="thinking-block compact" style="opacity:.7"><div class="thinking-header" onclick="toggleThinkBlock(\'tb-live-think\')">' +
+              '<span class="thinking-label">Thinking<span class="think-inline-stats"> · ' + thinkTokCount + ' tok · ' + (liveElapsed / 1000).toFixed(1) + 's · ' + liveTps + ' t/s</span></span>' +
+              '<span class="thinking-chevron collapsed" id="tb-live-think-chev">&#x25BC;</span></div>' +
+              '<div class="thinking-body" id="tb-live-think">' + esc(thinkFull) + '</div></div>';
+            if (full) html += '<span style="white-space:pre-wrap">' + esc(full) + '</span>';
+            contentEl.innerHTML = html;
+            smartScroll();
+            addTokenLog(thinkTok, data, true);
+
+            // Live update thinking tab
+            if (debugTab === 'thinking') {
+              renderLiveThinking(thinkFull, thinkTokCount, performance.now() - thinkStartTime);
+            }
+          }
+
+          if (hasContent) {
+            // If we were in Ollama thinking mode and now got content, finalize thinking
+            if (ollamaThinking && !hasThinkField) {
+              const thinkElapsed = performance.now() - (thinkStartTime || startTime);
+              thinkingLog.push({
+                content: currentThinkContent.trim(),
+                startTime: thinkStartTime,
+                endTime: performance.now(),
+                elapsed: thinkElapsed,
+                tokens: thinkTokCount,
+                requestIndex: stats.requests
+              });
+              updateThinkingTabState();
+              if (debugTab === 'thinking') renderDebug();
+              addTimeline('Thinking done: ' + thinkTokCount + ' tok, ' + (thinkElapsed / 1000).toFixed(1) + 's');
+              ollamaThinking = false;
+              currentThinkContent = '';
+            }
+
+            full += contentTok; tokCount++;
+            if (!firstTokTime) { firstTokTime = performance.now(); addTimeline('TTFT: ' + (firstTokTime - startTime).toFixed(0) + 'ms'); }
+
+            // --- Inline <think> tag tracking (fallback for models that embed tags) ---
+            const wasInside = insideThink;
+            insideThink = isInsideThinkTag(full);
+
+            if (!wasInside && insideThink) {
+              thinkStartTime = performance.now();
+              currentThinkContent = '';
+              thinkTokCount = 0;
+              addTimeline('Thinking started (inline tags)');
+            }
+            if (wasInside && !insideThink) {
+              const thinkElapsed = performance.now() - (thinkStartTime || startTime);
+              thinkingLog.push({
+                content: currentThinkContent.trim(),
+                startTime: thinkStartTime,
+                endTime: performance.now(),
+                elapsed: thinkElapsed,
+                tokens: thinkTokCount,
+                requestIndex: stats.requests
+              });
+              updateThinkingTabState();
+              if (debugTab === 'thinking') renderDebug();
+              addTimeline('Thinking done: ' + thinkTokCount + ' tok, ' + (thinkElapsed / 1000).toFixed(1) + 's');
+              currentThinkContent = '';
+              thinkTokCount = 0;
+            }
+
+            if (insideThink) {
+              let cleanTok = contentTok;
+              if (contentTok.includes('<think>')) cleanTok = contentTok.split('<think>').pop();
+              currentThinkContent += cleanTok;
+              thinkTokCount++;
+            }
+
+            // Render message with thinking blocks
+            const displayParts = parseThinkingTags(full);
+            const hasThinkingInContent = displayParts.some(p => p.type === 'thinking');
+
+            let html = '';
+            // Completed Ollama thinking block at the top
+            if (thinkFull && !ollamaThinking) {
+              html += renderThinkingBlockHTML(thinkFull, 'tb-ollama-done');
+            }
+
+            if (hasThinkingInContent || insideThink) {
+              displayParts.forEach((p, i) => {
+                if (p.type === 'thinking') {
+                  html += renderThinkingBlockHTML(p.content, 'tb-live-' + i);
+                } else {
+                  html += '<span style="white-space:pre-wrap">' + esc(p.content) + '</span>';
+                }
+              });
+              if (insideThink) {
+                const ithinkElapsed = performance.now() - (thinkStartTime || startTime);
+                const ithinkTps = ithinkElapsed > 0 ? (thinkTokCount / (ithinkElapsed / 1000)).toFixed(1) : '0';
+                html += '<div class="thinking-block compact" style="opacity:.7"><div class="thinking-header">' +
+                  '<span class="thinking-label">Thinking<span class="think-inline-stats"> · ' + thinkTokCount + ' tok · ' + (ithinkElapsed / 1000).toFixed(1) + 's · ' + ithinkTps + ' t/s</span></span>' +
+                  '</div></div>';
+              }
+              contentEl.innerHTML = html;
+            } else if (thinkFull && !ollamaThinking) {
+              // Had Ollama thinking, now showing content
+              html += '<span style="white-space:pre-wrap">' + esc(full) + '</span>';
+              contentEl.innerHTML = html;
+            } else {
+              contentEl.textContent = full;
+            }
+
+            smartScroll();
+            addTokenLog(contentTok, data, insideThink || contentTok.includes('<think>') || contentTok.includes('</think>'));
+          }
+
+          if (data.done) lastData = data;
+        } catch (e) {}
+      }
+    }
+  } catch (e) {
+    if (e.name === 'AbortError') {
+      // Save partial thinking if stopped mid-think
+      if ((insideThink || ollamaThinking) && currentThinkContent.trim()) {
+        thinkingLog.push({
+          content: currentThinkContent.trim() + '\n[stopped]',
+          startTime: thinkStartTime,
+          endTime: performance.now(),
+          elapsed: performance.now() - (thinkStartTime || startTime),
+          tokens: thinkTokCount,
+          requestIndex: stats.requests,
+          partial: true
+        });
+        updateThinkingTabState();
+      }
+      let stoppedHtml = '';
+      if (thinkFull) stoppedHtml += renderThinkingBlockHTML(thinkFull + (ollamaThinking ? '\n[stopped]' : ''), 'tb-stopped');
+      stoppedHtml += renderMsgContent(full) + '\n\n[stopped]';
+      contentEl.innerHTML = stoppedHtml;
+      addTimeline('Stopped at ' + tokCount + ' tok');
+    }
+    else { contentEl.textContent = '[Error: ' + e.message + ']'; addTimeline('Error: ' + e.message); }
+  }
+
+  // Finalize any remaining Ollama thinking that wasn't closed
+  if (ollamaThinking && currentThinkContent.trim()) {
+    const thinkElapsed = performance.now() - (thinkStartTime || startTime);
+    thinkingLog.push({
+      content: currentThinkContent.trim(),
+      startTime: thinkStartTime,
+      endTime: performance.now(),
+      elapsed: thinkElapsed,
+      tokens: thinkTokCount,
+      requestIndex: stats.requests
+    });
+    updateThinkingTabState();
+  }
+
+  const elapsed = performance.now() - startTime;
+  const ttft = firstTokTime ? firstTokTime - startTime : 0;
+  const genTime = firstTokTime ? performance.now() - firstTokTime : elapsed;
+  const tps = tokCount > 0 ? tokCount / (genTime / 1000) : 0;
+
+  const rs = {
+    model, tokens: tokCount, elapsed_ms: elapsed.toFixed(0), gen_ms: genTime.toFixed(0),
+    tps: tps.toFixed(1), ttft_ms: ttft.toFixed(0), ...options, seed: seed >= 0 ? seed : 'random'
+  };
+  if (lastData) {
+    if (lastData.eval_count) rs.ol_eval_count = lastData.eval_count;
+    if (lastData.eval_duration) { rs.ol_eval_ms = (lastData.eval_duration / 1e6).toFixed(1); rs.ol_eval_tps = (lastData.eval_count / (lastData.eval_duration / 1e9)).toFixed(1); }
+    if (lastData.prompt_eval_count) rs.ol_prompt_tokens = lastData.prompt_eval_count;
+    if (lastData.prompt_eval_duration) rs.ol_prompt_ms = (lastData.prompt_eval_duration / 1e6).toFixed(1);
+    if (lastData.load_duration) rs.ol_load_ms = (lastData.load_duration / 1e6).toFixed(1);
+    if (lastData.total_duration) rs.ol_total_ms = (lastData.total_duration / 1e6).toFixed(1);
+  }
+
+  const parts = [tokCount + ' tok', (elapsed / 1000).toFixed(1) + 's', tps.toFixed(1) + ' tok/s', 'TTFT ' + ttft.toFixed(0) + 'ms'];
+  if (lastData?.prompt_eval_count) parts.push('prompt: ' + lastData.prompt_eval_count + ' tok');
+  metaEl.innerHTML = parts.map(p => {
+    let c = '';
+    if (p.includes('tok/s')) { const v = parseFloat(p); c = v > 20 ? 'good' : v > 5 ? '' : 'warn'; }
+    return '<span class="meta-item ' + c + '">' + p + '</span>';
+  }).join('');
+
+  // Final re-render of content with proper thinking stats
+  const lastThink = thinkingLog.length > 0 ? thinkingLog[thinkingLog.length - 1] : null;
+  let finalHtml = '';
+  if (thinkFull) {
+    const thinkOpts = { tokens: lastThink ? lastThink.tokens : thinkTokCount, elapsed: lastThink ? lastThink.elapsed : 0 };
+    finalHtml += renderThinkingBlockHTML(thinkFull, 'tb-final-' + stats.requests, thinkOpts);
+  }
+  const displayParts = parseThinkingTags(full);
+  const hasInlineThinking = displayParts.some(p => p.type === 'thinking');
+  if (hasInlineThinking) {
+    displayParts.forEach((p, i) => {
+      if (p.type === 'thinking') {
+        const tOpts = { tokens: lastThink ? lastThink.tokens : 0, elapsed: lastThink ? lastThink.elapsed : 0 };
+        finalHtml += renderThinkingBlockHTML(p.content, 'tb-final-inline-' + i, tOpts);
+      } else {
+        finalHtml += '<span style="white-space:pre-wrap">' + esc(p.content) + '</span>';
+      }
+    });
+    contentEl.innerHTML = finalHtml;
+  } else if (thinkFull) {
+    finalHtml += '<span style="white-space:pre-wrap">' + esc(full) + '</span>';
+    contentEl.innerHTML = finalHtml;
+  }
+
+  stats.totalTokens += tokCount;
+  stats.totalPromptTokens += (lastData?.prompt_eval_count || 0);
+  stats.totalTime += elapsed;
+  stats.requests++;
+  stats.perRequest.push(rs);
+  addRawLog('res', 'Complete', rs);
+  addTimeline('Done: ' + tokCount + ' tok, ' + tps.toFixed(1) + ' tok/s');
+  messages.push({ role: 'assistant', content: full });
+  currentAbort = null;
+  setGenerating(false);
+  renderDebug();
+}
+
+// Live thinking tab update during generation
+function renderLiveThinking(content, tokCount, elapsed) {
+  const tps = elapsed > 0 ? (tokCount / (elapsed / 1000)).toFixed(1) : '—';
+  let h = '<div class="think-stats">' +
+    '<span style="color:var(--accent-think);font-weight:600">&#x1F4AD; Live</span>' +
+    '<span><span class="val">' + tokCount + '</span> tok</span>' +
+    '<span><span class="val">' + (elapsed / 1000).toFixed(1) + 's</span></span>' +
+    '<span><span class="val">' + tps + '</span> tok/s</span>' +
+    '</div>';
+
+  // Show past completed blocks first
+  thinkingLog.forEach((t, i) => {
+    const ttps = t.elapsed > 0 ? (t.tokens / (t.elapsed / 1000)).toFixed(1) : '—';
+    h += '<div class="think-entry">' +
+      '<div class="think-entry-header">' +
+      '<span class="think-entry-label">Block ' + (i + 1) + (t.partial ? ' (partial)' : '') + '</span>' +
+      '<span class="think-entry-meta">' + t.tokens + ' tok · ' + (t.elapsed / 1000).toFixed(1) + 's · ' + ttps + ' tok/s</span>' +
+      '</div>' +
+      '<div class="think-entry-content">' + esc(t.content) + '</div>' +
+      '</div>';
+  });
+
+  // Current live block
+  h += '<div class="think-entry" style="border-color:var(--accent-think);opacity:.85">' +
+    '<div class="think-entry-header">' +
+    '<span class="think-entry-label" style="animation:blink .6s infinite">&#x25CF; Live</span>' +
+    '<span class="think-entry-meta">' + tokCount + ' tok · ' + (elapsed / 1000).toFixed(1) + 's · ' + tps + ' tok/s</span>' +
+    '</div>' +
+    '<div class="think-entry-content" style="max-height:300px;overflow-y:auto">' + esc(content) + '</div>' +
+    '</div>';
+
+  debugContent.innerHTML = h;
+  debugContent.scrollTop = debugContent.scrollHeight;
+}
+
+function renderDebug() {
+  streamEl = null;
+  if (debugTab === 'stream') {
+    if (!tokenLog.length) {
+      debugContent.innerHTML = '<div style="color:var(--text-dim);padding:20px;text-align:center">Tokens stream here in real time.<br><br><span style="color:var(--accent-warm)">Hover</span> for timing. Separators between requests.<br><span style="color:var(--accent-think)">Blue tokens</span> = thinking.</div>';
+      return;
+    }
+    let h = '<div class="token-stream" id="tsc">';
+    tokenLog.forEach(t => {
+      if (t.type === 'separator') h += '</div><div class="token-sep"></div><div class="token-stream">';
+      else h += '<span class="token' + (t.isThinking ? ' think-token' : '') + '" title="t+' + (t.time - (tokenLog[0]?.time || 0)) + 'ms' + (t.isThinking ? ' [thinking]' : '') + '">' + esc(t.token) + '</span>';
+    });
+    h += '</div>';
+    debugContent.innerHTML = h;
+    streamEl = document.getElementById('tsc');
+    debugContent.scrollTop = debugContent.scrollHeight;
+  } else if (debugTab === 'thinking') {
+    renderThinkingTab();
+  } else if (debugTab === 'raw') {
+    if (!rawLog.length) { debugContent.innerHTML = '<div style="color:var(--text-dim);padding:20px;text-align:center">Raw API payloads logged here.</div>'; return; }
+    debugContent.innerHTML = rawLog.map(e =>
+      '<div class="entry"><span class="timestamp">' + timeStr(e.time) + '</span> <span class="label ' + e.type + '">' + e.type.toUpperCase() + '</span> ' + esc(e.label) +
+      (e.data ? '<pre>' + esc(JSON.stringify(e.data, null, 2)) + '</pre>' : '') + '</div>'
+    ).join('');
+    debugContent.scrollTop = debugContent.scrollHeight;
+  } else if (debugTab === 'stats') {
+    const avg = stats.perRequest.length ? (stats.perRequest.reduce((a, r) => a + parseFloat(r.tps), 0) / stats.perRequest.length).toFixed(1) : '\u2014';
+    let h = '<div class="stats-grid"><div class="stat-box"><div class="stat-val">' + stats.requests + '</div><div class="stat-label">requests</div></div><div class="stat-box"><div class="stat-val">' + stats.totalTokens + '</div><div class="stat-label">gen tokens</div></div><div class="stat-box"><div class="stat-val">' + avg + '</div><div class="stat-label">avg tok/s</div></div><div class="stat-box"><div class="stat-val">' + stats.totalPromptTokens + '</div><div class="stat-label">prompt tokens</div></div></div>';
+    if (stats.perRequest.length) {
+      h += '<div style="color:var(--accent-warm);margin:12px 0 8px">Per-Request:</div>';
+      stats.perRequest.forEach((r, i) => {
+        const t = parseFloat(r.tps), bw = Math.min(100, t / 60 * 100), bc = t > 20 ? 'var(--accent-green)' : t > 8 ? 'var(--accent-warm)' : 'var(--accent-red)';
+        h += '<div class="entry"><div style="color:var(--text-bright)">Req ' + (i + 1) + '</div><div style="margin:4px 0">' + r.tokens + ' tok &middot; ' + t + ' tok/s &middot; TTFT ' + r.ttft_ms + 'ms &middot; ' + (parseFloat(r.elapsed_ms) / 1000).toFixed(1) + 's</div><div class="perf-bar"><div class="fill" style="width:' + bw + '%;background:' + bc + '"></div></div>';
+        if (r.ol_eval_tps) h += '<div style="margin-top:6px;font-size:.9em"><span style="color:var(--accent-purple)">Ollama:</span> eval ' + r.ol_eval_tps + ' tok/s' + (r.ol_prompt_ms ? ' &middot; prompt ' + r.ol_prompt_ms + 'ms' : '') + (r.ol_load_ms ? ' &middot; load ' + r.ol_load_ms + 'ms' : '') + '</div>';
+        h += '<div style="margin-top:4px;font-size:.85em;color:var(--text-dim)">temp=' + r.temperature + ' top_p=' + r.top_p + ' top_k=' + r.top_k + ' rep=' + r.repeat_penalty + ' seed=' + r.seed + '</div></div>';
+      });
+    }
+    debugContent.innerHTML = h;
+  } else if (debugTab === 'messages') {
+    const all = [];
+    if (systemPromptEnabled && sysInput.value.trim()) all.push({ role: 'system', content: sysInput.value.trim() });
+    all.push(...messages);
+    let h = '<div style="margin-bottom:12px"><span style="color:var(--accent-purple)">messages[]</span> <span style="color:var(--text-dim)">' + all.length + ' entries &middot; ~' + JSON.stringify(all).length + ' chars</span></div>';
+    all.forEach((m, i) => {
+      const p = m.content.length > 100 ? m.content.slice(0, 100) + '\u2026' : m.content;
+      h += '<div class="msg-entry role-' + m.role + '" onclick="this.classList.toggle(\'expanded\')"><span class="me-role ' + m.role + '">[' + i + '] ' + m.role + '</span> <span class="me-preview">' + esc(p) + '</span><pre class="me-full">' + esc(m.content) + '</pre></div>';
+    });
+    h += '<div style="margin-top:16px"><span style="color:var(--text-dim)">Payload:</span><pre>' + esc(JSON.stringify(all, null, 2)) + '</pre></div>';
+    debugContent.innerHTML = h;
+  } else if (debugTab === 'timeline') {
+    if (!timelineLog.length) { debugContent.innerHTML = '<div style="color:var(--text-dim);padding:20px;text-align:center">Event timeline.</div>'; return; }
+    const t0 = timelineLog[0].time;
+    debugContent.innerHTML = timelineLog.map(e => {
+      const off = e.time - t0;
+      const os = off > 60000 ? '+' + (off / 60000).toFixed(1) + 'm' : '+' + (off / 1000).toFixed(1) + 's';
+      return '<div class="timeline-entry"><span class="te-time">' + timeStr(e.time) + '<br><span style="color:var(--accent-warm)">' + os + '</span></span><span class="te-event">' + esc(e.event) + '</span></div>';
+    }).join('');
+    debugContent.scrollTop = debugContent.scrollHeight;
+  } else if (debugTab === 'model') {
+    if (!currentModelInfo) { debugContent.innerHTML = '<div style="color:var(--text-dim);padding:20px;text-align:center">Select a model to inspect.</div>'; return; }
+    const m = currentModelInfo;
+    let h = '<div style="color:var(--accent-warm);margin-bottom:12px">' + modelSelect.value + '</div>';
+    if (m.details) h += '<div class="entry"><span class="label sys">DETAILS</span><pre>' + esc(JSON.stringify(m.details, null, 2)) + '</pre></div>';
+    if (m.model_info) h += '<div class="entry"><span class="label sys">ARCHITECTURE</span><pre>' + esc(JSON.stringify(m.model_info, null, 2)) + '</pre></div>';
+    if (m.parameters) h += '<div class="entry"><span class="label sys">PARAMETERS</span><pre>' + esc(m.parameters) + '</pre></div>';
+    if (m.template) h += '<div class="entry"><span class="label sys">TEMPLATE</span><pre>' + esc(m.template) + '</pre></div>';
+    if (m.modelfile) h += '<div class="entry"><span class="label sys">MODELFILE</span><pre>' + esc(m.modelfile) + '</pre></div>';
+    debugContent.innerHTML = h;
+  }
+}
+
+function renderThinkingTab() {
+  if (!thinkingLog.length && !isGenerating) {
+    debugContent.innerHTML = '<div class="think-empty"><div class="icon">&#x1F4AD;</div>' +
+      '<div>No thinking blocks captured yet.</div><br>' +
+      '<div style="font-size:.85em">Use a reasoning model like <span style="color:var(--accent-warm)">DeepSeek-R1</span>.<br><br>' +
+      'Supports both:<br>' +
+      '&bull; Ollama\'s <span style="color:var(--accent-think)">thinking</span> field (newer API)<br>' +
+      '&bull; Inline <span style="color:var(--accent-think)">&lt;think&gt;</span> tags in content<br><br>' +
+      'Thinking content appears here in real time.</div></div>';
+    return;
+  }
+
+  // Summary stats
+  const totalThinkTok = thinkingLog.reduce((a, t) => a + t.tokens, 0);
+  const totalThinkTime = thinkingLog.reduce((a, t) => a + t.elapsed, 0);
+  const avgThinkTps = totalThinkTime > 0 ? (totalThinkTok / (totalThinkTime / 1000)).toFixed(1) : '—';
+
+  let h = '<div class="think-stats">' +
+    '<span><span class="val">' + thinkingLog.length + '</span> block' + (thinkingLog.length !== 1 ? 's' : '') + '</span>' +
+    '<span><span class="val">' + totalThinkTok + '</span> tok</span>' +
+    '<span><span class="val">' + (totalThinkTime / 1000).toFixed(1) + 's</span> total</span>' +
+    '<span><span class="val">' + avgThinkTps + '</span> tok/s</span>' +
+    '</div>';
+
+  thinkingLog.forEach((t, i) => {
+    const tps = t.elapsed > 0 ? (t.tokens / (t.elapsed / 1000)).toFixed(1) : '—';
+    h += '<div class="think-entry">' +
+      '<div class="think-entry-header">' +
+      '<span class="think-entry-label">Block ' + (i + 1) + (t.partial ? ' (partial)' : '') + '</span>' +
+      '<span class="think-entry-meta">' + t.tokens + ' tok · ' + (t.elapsed / 1000).toFixed(1) + 's · ' + tps + ' tok/s</span>' +
+      '</div>' +
+      '<div class="think-entry-content">' + esc(t.content) + '</div>' +
+      '</div>';
+  });
+
+  debugContent.innerHTML = h;
+  debugContent.scrollTop = debugContent.scrollHeight;
+}
+
+// Events
+sendBtn.addEventListener('click', () => { if (isGenerating && currentAbort) currentAbort.abort(); else sendMessage(); });
+userInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); if (isGenerating && currentAbort) currentAbort.abort(); else sendMessage(); }
+  if (e.key === 'Escape' && currentAbort) currentAbort.abort();
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && currentAbort) currentAbort.abort(); });
+userInput.addEventListener('input', () => autoResize(userInput));
+
+$('tempSlider').addEventListener('input', e => { $('tempInput').value = (e.target.value / 100).toFixed(1); });
+$('tempInput').addEventListener('input', e => { $('tempSlider').value = Math.round(parseFloat(e.target.value) * 100); });
+$('topPSlider').addEventListener('input', e => { $('topPInput').value = (e.target.value / 100).toFixed(2); });
+$('topPInput').addEventListener('input', e => { $('topPSlider').value = Math.round(parseFloat(e.target.value) * 100); });
+
+document.querySelectorAll('.debug-tab').forEach(t => t.addEventListener('click', () => {
+  document.querySelectorAll('.debug-tab').forEach(x => x.classList.remove('active'));
+  t.classList.add('active'); debugTab = t.dataset.tab; streamEl = null; renderDebug();
+}));
+
+$('debugToggle').addEventListener('click', () => {
+  $('app').classList.toggle('debug-closed');
+  $('debugToggle').classList.toggle('active');
+  persistCurrent();
+});
+
+$('clearBtn').addEventListener('click', () => {
+  messages = []; tokenLog = []; rawLog = []; timelineLog = []; thinkingLog = [];
+  stats = { totalTokens: 0, totalPromptTokens: 0, totalTime: 0, requests: 0, perRequest: [] };
+  while (chatArea.children.length > 1) chatArea.removeChild(chatArea.firstChild);
+  streamEl = null; updateThinkingTabState(); renderDebug(); addTimeline('Cleared');
+});
+
+$('exportBtn').addEventListener('click', () => {
+  const d = {
+    exported_at: new Date().toISOString(),
+    app: 'LLM-Dyno',
+    ollama_url: OLLAMA_BASE,
+    model: modelSelect.value,
+    system_prompt: systemPromptEnabled ? sysInput.value : null,
+    parameters: {
+      temperature: parseFloat($('tempInput').value),
+      max_tokens: parseInt($('maxTokInput').value),
+      top_p: parseFloat($('topPInput').value),
+      top_k: parseInt($('topKInput').value),
+      repeat_penalty: parseFloat($('repeatPenInput').value),
+      seed: parseInt($('seedInput').value)
+    },
+    messages, stats, thinking: thinkingLog, timeline: timelineLog, model_info: currentModelInfo
+  };
+  const b = new Blob([JSON.stringify(d, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(b);
+  a.download = 'dyno-' + modelSelect.value.replace(/[:/]/g, '-') + '-' + Date.now() + '.json';
+  a.click();
+  addTimeline('Exported');
+});
+
+$('refreshModels').addEventListener('click', refreshModels);
+
+$('spToggle').addEventListener('click', () => {
+  systemPromptEnabled = !systemPromptEnabled;
+  $('spToggle').textContent = systemPromptEnabled ? 'ON' : 'OFF';
+  $('spToggle').classList.toggle('off', !systemPromptEnabled);
+  sysInput.style.opacity = systemPromptEnabled ? '1' : '0.3';
+  addTimeline('Sys prompt ' + (systemPromptEnabled ? 'ON' : 'OFF'));
+});
+
+// Settings panel
+$('settingsBtn').addEventListener('click', () => $('settingsOverlay').classList.add('open'));
+$('settingsClose').addEventListener('click', () => { $('settingsOverlay').classList.remove('open'); persistCurrent(); });
+$('settingsOverlay').addEventListener('click', e => { if (e.target === $('settingsOverlay')) { $('settingsOverlay').classList.remove('open'); persistCurrent(); } });
+
+$('setChatFont').addEventListener('input', e => {
+  const v = e.target.value; $('setChatFontVal').textContent = v + 'px';
+  document.documentElement.style.setProperty('--font-size', v + 'px');
+});
+$('setDebugFont').addEventListener('input', e => {
+  const v = e.target.value; $('setDebugFontVal').textContent = v + 'px';
+  document.documentElement.style.setProperty('--debug-font-size', v + 'px');
+});
+$('setDebugWidth').addEventListener('input', e => {
+  const v = e.target.value; $('setDebugWidthVal').textContent = v + 'px';
+  document.documentElement.style.setProperty('--debug-width', v + 'px');
+});
+$('setScrollThresh').addEventListener('input', e => {
+  scrollThreshold = parseInt(e.target.value);
+  $('setScrollThreshVal').textContent = e.target.value + 'px';
+});
+$('setOllamaUrl').addEventListener('change', e => {
+  OLLAMA_BASE = e.target.value.replace(/\/$/, '');
+  persistCurrent();
+  addTimeline('Ollama URL changed: ' + OLLAMA_BASE);
   refreshModels();
-};
+});
 
-/* ---------- STARTUP ---------- */
-initSettings();
+$('settingsReset').addEventListener('click', () => {
+  if (!confirm('Reset all settings to defaults?')) return;
+  localStorage.removeItem(STORAGE_KEY);
+  settings = Object.assign({}, DEFAULTS);
+  applySettings(settings);
+  addTimeline('Settings reset to defaults');
+  refreshModels();
+});
+
+// Boot
 refreshModels();
+renderDebug();
+autoResize(sysInput);
+sysInput.addEventListener('input', () => autoResize(sysInput));
 </script>
-
 </body>
 </html>
