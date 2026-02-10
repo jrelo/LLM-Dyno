@@ -2,8 +2,6 @@
 
 Single-file large language model chat console for [Ollama](https://ollama.com). No build step, no dependencies. Open the HTML and connect to your local models.
 
-<img width="2047" height="988" alt="image" src="https://github.com/user-attachments/assets/343f84df-464b-47df-acd7-9f5621e4ef6c" />
-
 ## Quick Start
 
 1. [Install Ollama](https://ollama.com/download)
@@ -54,9 +52,14 @@ The model now appears in Dyno's dropdown.
 ## Features
 
 - Streaming chat with token-by-token debug view
-- Real-time <think> tags view
+- Real-time <think> tags view for Thinking models
 - Full parameter control (temperature, top_p, top_k, repeat penalty, seed)
 - Editable system prompt
 - Raw API inspector, per-request stats, message history, model info
 - Session export to JSON
 - All settings persist in localStorage
+
+## Screenshots
+
+<img width="2047" height="988" alt="image" src="https://github.com/user-attachments/assets/343f84df-464b-47df-acd7-9f5621e4ef6c" />
+<img width="2046" height="988" alt="image" src="https://github.com/user-attachments/assets/ef79025c-b6a3-4c4e-b8d8-c1ad36799e16" />
