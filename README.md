@@ -1,8 +1,8 @@
 # LLM-Dyno
 
-Single-file chat console for [Ollama](https://ollama.com). No build step, no dependencies. Open the HTML and talk to your local models.
+Single-file large language model chat console for [Ollama](https://ollama.com). No build step, no dependencies. Open the HTML and connect to your local models.
 
-<img width="2045" height="986" alt="image" src="https://github.com/user-attachments/assets/90528132-330e-43f7-8f9a-59b1c3a77bb6" />
+<img width="2047" height="988" alt="image" src="https://github.com/user-attachments/assets/343f84df-464b-47df-acd7-9f5621e4ef6c" />
 
 ## Quick Start
 
@@ -10,7 +10,7 @@ Single-file chat console for [Ollama](https://ollama.com). No build step, no dep
 2. Pull a model: `ollama pull llama3.2`
 3. Open `llm-dyno.html` in a browser
 
-Ollama serves on `localhost:11434` by default. Dyno connects there automatically. Change the URL in settings if your server lives elsewhere on the network.
+Ollama serves on `localhost:11434` by default. LLM-Dyno connects there automatically. Change the URL in settings if your server lives elsewhere on the network.
 
 ## Loading GGUF Models from HuggingFace
 
@@ -54,6 +54,7 @@ The model now appears in Dyno's dropdown.
 ## Features
 
 - Streaming chat with token-by-token debug view
+- Real-time <think> tags view
 - Full parameter control (temperature, top_p, top_k, repeat penalty, seed)
 - Editable system prompt
 - Raw API inspector, per-request stats, message history, model info
